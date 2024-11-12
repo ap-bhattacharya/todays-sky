@@ -1,15 +1,10 @@
-streamlit==1.17.0
-requests==2.28.1
-python-dotenv==1.0.0
-pandas==1.5.3
-matplotlib==3.6.2
-Flask==2.2.3              # For backend web framework
-requests==2.31.0          # For making API requests to weather services
-pandas==2.1.0             # For data manipulation and handling
-matplotlib==3.7.2         # For plotting graphs (e.g., temperature trends)
-plotly==5.14.0            # For interactive weather graphs/charts
-flask-cors==3.1.1         # For handling Cross-Origin Resource Sharing (CORS)
-python-dotenv==1.0.0      # For managing environment variables (API keys)
-geocoder==1.38.1          # For handling location-based services (e.g., to get coordinates)
-streamlit==1.18.0         # If using Streamlit for UI (optional)
-gunicorn==20.1.0          # For production server (if deploying on Heroku or similar)
+streamlit==1.18.0            # For the app's frontend (if using Streamlit for UI)
+requests==2.31.0             # For making API requests to weather services
+python-dotenv==1.0.0         # For managing environment variables (API keys)
+pandas==2.1.0                # For data manipulation and handling
+matplotlib==3.7.2            # For plotting graphs (e.g., temperature trends)
+plotly==5.14.0               # For interactive weather graphs/charts
+flask==2.2.3                 # For backend web framework
+flask-cors==3.1.1            # For handling Cross-Origin Resource Sharing (CORS)
+geocoder==1.38.1             # For handling location-based services (e.g., to get coordinates)
+gunicorn==20.1.0             # For production server (if deploying on Heroku or similar)
