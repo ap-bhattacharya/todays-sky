@@ -144,7 +144,7 @@ def app():
 
     st.markdown("---")
     st.write("💡 **Tip:** The best journeys start with a quick weather check – go explore!")
-    st.write("Made with ❤️ using Streamlit by AP Bhattacharya & Jagriti.")
+    st.write("Made with ❤️ using Streamlit by AP Bhattacharya")
 
 # Run the app
 if __name__ == "__main__":
