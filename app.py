@@ -9,143 +9,126 @@ from datetime import datetime
 load_dotenv()
 API_KEY = os.getenv("OPENWEATHER_API_KEY")
 
-# Function to convert UTC time to IST
+# Streamlit Page Config
+st.set_page_config(
+    page_title="Today's Sky 🌞 - Weather & AQI Tracker",
+    page_icon="☁️",
+    layout="centered"
+)
+
+# Inject Meta Tags for SEO
+meta_tags = """
+<head>
+    <meta name="description" content="Get real-time weather & air quality index (AQI) insights worldwide. Accurate forecasts & pollution data for better travel planning!">
+    <meta name="keywords" content="weather, air quality, AQI, pollution, forecast, climate, Streamlit">
+    <meta name="robots" content="index, follow">
+    <meta property="og:title" content="Today's Sky - Weather & AQI">
+    <meta property="og:description" content="Live weather updates & AQI tracker for cities worldwide.">
+    <meta property="og:image" content="https://yourwebsite.com/preview-image.png">
+    <meta property="og:url" content="https://yourwebsite.com">
+    <meta name="twitter:card" content="summary_large_image">
+</head>
+"""
+st.markdown(meta_tags, unsafe_allow_html=True)
+
+# Inject Google Analytics
+ga_script = """
+<script async src="https://www.googletagmanager.com/gtag/js?id=YOUR_GA_ID"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'YOUR_GA_ID');
+</script>
+"""
+st.markdown(ga_script, unsafe_allow_html=True)
+
+# Convert UTC to IST
 def utc_to_ist(utc_time):
     utc_dt = datetime.utcfromtimestamp(utc_time)
     ist_timezone = pytz.timezone("Asia/Kolkata")
     ist_dt = utc_dt.replace(tzinfo=pytz.utc).astimezone(ist_timezone)
     return ist_dt.strftime("%I:%M %p")
 
-# Function to get current weather data
+# Cache API Calls
+@st.cache_data(ttl=300)  # Cache for 5 minutes
 def get_weather_data(city, api_key):
     url = f'http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric'
     try:
         response = requests.get(url)
-        if response.status_code == 200:
-            return response.json(), None
-        elif response.status_code == 404:
-            return None, "City not found! Please check the spelling or try another city."
-        else:
-            return None, f"Error {response.status_code}: Unable to fetch weather data."
-    except requests.exceptions.RequestException as e:
-        return None, f"Network error: {e}"
+        return response.json() if response.status_code == 200 else None
+    except requests.exceptions.RequestException:
+        return None
 
-# Function to get AQI data
+@st.cache_data(ttl=300)
 def get_aqi_data(lat, lon, api_key):
     url = f'http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={api_key}'
     try:
         response = requests.get(url)
-        if response.status_code == 200:
-            return response.json(), None
-        else:
-            return None, "AQI data not available."
-    except requests.exceptions.RequestException as e:
-        return None, f"Network error: {e}"
+        return response.json() if response.status_code == 200 else None
+    except requests.exceptions.RequestException:
+        return None
 
-# Function to get 5-day forecast data
+@st.cache_data(ttl=300)
 def get_forecast_data(city, api_key):
     url = f'http://api.openweathermap.org/data/2.5/forecast?q={city}&appid={api_key}&units=metric'
     try:
         response = requests.get(url)
-        if response.status_code == 200:
-            return response.json(), None
-        elif response.status_code == 404:
-            return None, "Forecast data not available for this city."
-        else:
-            return None, f"Error {response.status_code}: Unable to fetch forecast data."
-    except requests.exceptions.RequestException as e:
-        return None, f"Network error: {e}"
+        return response.json() if response.status_code == 200 else None
+    except requests.exceptions.RequestException:
+        return None
 
-# Function to get AQI level description
+# AQI Levels
 def aqi_review(value):
-    if value <= 50:
-        return "Good 🟢", "normal", "Air quality is considered satisfactory, and air pollution poses little or no risk."
-    elif value <= 100:
-        return "Moderate 🟡", "normal", "Air quality is acceptable; however, there may be a moderate health concern for a very small number of people who are sensitive to air pollution."
-    elif value <= 150:
-        return "Unhealthy for Sensitive Groups 🟠", "normal", "Members of sensitive groups (e.g., children, elderly, and people with respiratory conditions) may experience health effects."
-    elif value <= 200:
-        return "Unhealthy 🔴", "inverse", "Everyone may begin to experience health effects; members of sensitive groups may experience more serious health effects."
-    elif value <= 300:
-        return "Very Unhealthy 🟣", "inverse", "Health alert: everyone may experience more serious health effects."
-    else:
-        return "Hazardous ⚫", "inverse", "Health warning of emergency conditions. The entire population is more likely to be affected."
+    if value <= 50: return "Good 🟢", "Air quality is satisfactory."
+    elif value <= 100: return "Moderate 🟡", "Air quality is acceptable."
+    elif value <= 150: return "Unhealthy for Sensitive Groups 🟠", "Sensitive people should take precautions."
+    elif value <= 200: return "Unhealthy 🔴", "Everyone may experience health effects."
+    elif value <= 300: return "Very Unhealthy 🟣", "Health alert for all people."
+    else: return "Hazardous ⚫", "Emergency conditions, avoid outdoor activity."
 
 # Streamlit UI
-def app():
-    st.title("☁️ Today's Sky 🌞")
-    st.write("📍 Weather & AQI insights—anywhere, anytime! 🌅")
+st.title("☁️ Today's Sky 🌞")
+st.write("📍 Weather & AQI insights—anywhere, anytime! 🌅")
 
-    city = st.text_input("Enter City Name:")
-    
-    if city:
-        with st.spinner("Fetching data..."):
-            # Get current weather data
-            data, error_message = get_weather_data(city, API_KEY)
-            if data:
-                st.subheader(f"Current Weather in {data['name']} 🌤️")
-                
-                col1, col2, col3, col4 = st.columns(4)
-                col1.metric("🌡️ Temperature", f"{data['main']['temp']} °C")
-                col2.metric("🌤️ Weather", data['weather'][0]['description'].capitalize())
-                col3.metric("💧 Humidity", f"{data['main']['humidity']}%")
-                col4.metric("💨 Wind Speed", f"{data['wind']['speed']} m/s")
-                
-                col5, col6 = st.columns(2)
-                col5.metric("🌅 Sunrise", utc_to_ist(data['sys']['sunrise']))
-                col6.metric("🌇 Sunset", utc_to_ist(data['sys']['sunset']))
+city = st.text_input("Enter City Name:")
 
-                # Get AQI data
-                lat, lon = data['coord']['lat'], data['coord']['lon']
-                aqi_data, aqi_error = get_aqi_data(lat, lon, API_KEY)
-                
-                if aqi_data:
-                    st.subheader("Air Quality Index (AQI) 🌫️")
-                    aqi_value = aqi_data['list'][0]['main']['aqi']
-                    pm2_5 = aqi_data['list'][0]['components']['pm2_5']
-                    level, style, health_implication = aqi_review(pm2_5)
-                    
-                    st.metric("🌫️ PM2.5 AQI", f"{pm2_5} µg/m³", level)
-                    st.write("### Health Implications for PM2.5 AQI")
-                    st.write(health_implication)
-                    
-                    st.write("### Other AQI Components:")
-                    col1, col2 = st.columns(2)
-                    col1.write(f"🌫️ PM10: {aqi_data['list'][0]['components']['pm10']} µg/m³")
-                    col2.write(f"🧪 O3: {aqi_data['list'][0]['components']['o3']} µg/m³")
-                    col1.write(f"💨 NO2: {aqi_data['list'][0]['components']['no2']} µg/m³")
-                    col2.write(f"🌋 SO2: {aqi_data['list'][0]['components']['so2']} µg/m³")
-                    col1.write(f"🛢️ CO: {aqi_data['list'][0]['components']['co']} µg/m³")
-
-            elif error_message:
-                st.error(error_message)
+if city:
+    with st.spinner("Fetching data..."):
+        data = get_weather_data(city, API_KEY)
+        if data:
+            st.subheader(f"Current Weather in {data['name']} 🌤️")
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("🌡️ Temperature", f"{data['main']['temp']} °C")
+            col2.metric("🌤️ Weather", data['weather'][0]['description'].capitalize())
+            col3.metric("💧 Humidity", f"{data['main']['humidity']}%")
+            col4.metric("💨 Wind Speed", f"{data['wind']['speed']} m/s")
             
-            # Get 5-day forecast data
-            forecast_data, forecast_error = get_forecast_data(city, API_KEY)
+            st.metric("🌅 Sunrise", utc_to_ist(data['sys']['sunrise']))
+            st.metric("🌇 Sunset", utc_to_ist(data['sys']['sunset']))
+
+            lat, lon = data['coord']['lat'], data['coord']['lon']
+            aqi_data = get_aqi_data(lat, lon, API_KEY)
+            if aqi_data:
+                st.subheader("Air Quality Index (AQI) 🌫️")
+                aqi_value = aqi_data['list'][0]['main']['aqi']
+                pm2_5 = aqi_data['list'][0]['components']['pm2_5']
+                level, health_implication = aqi_review(pm2_5)
+                
+                st.metric("🌫️ PM2.5 AQI", f"{pm2_5} µg/m³", level)
+                st.write(f"### Health Implication: {health_implication}")
+
+            forecast_data = get_forecast_data(city, API_KEY)
             if forecast_data:
                 st.subheader("5-Day Weather Forecast 📅")
-                forecast_data = forecast_data['list']
-                
-                day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-                for i in range(0, len(forecast_data), 8):  # Display one data point per day (8 intervals = 24 hours)
-                    forecast = forecast_data[i]
+                for i in range(0, len(forecast_data['list']), 8):
+                    forecast = forecast_data['list'][i]
                     date = datetime.utcfromtimestamp(forecast['dt'])
-                    day_name = day_names[date.weekday()]
-                    temp_min = min(f['main']['temp_min'] for f in forecast_data[i:i+8])
-                    temp_max = max(f['main']['temp_max'] for f in forecast_data[i:i+8])
-                    desc = forecast['weather'][0]['description'].capitalize()
-                    
-                    st.write(f"### 📅 **{day_name}, {date.strftime('%d-%m-%Y')}**")
-                    col1, col2 = st.columns(2)
-                    col1.metric("🌡️ Temp Range", f"{temp_min}°C - {temp_max}°C")
-                    col2.metric("🌤️ Weather", desc)
-            elif forecast_error:
-                st.error(forecast_error)
+                    st.write(f"📅 **{date.strftime('%A, %d-%m-%Y')}**")
+                    st.metric("🌡️ Temp", f"{forecast['main']['temp']}°C")
+                    st.metric("🌤️ Weather", forecast['weather'][0]['description'].capitalize())
 
-    st.markdown("---")
-    st.write("💡 **Tip:** The best journeys start with a quick weather check – go explore!")
-    st.write("Made with ❤️ using Streamlit by AP Bhattacharya")
+st.markdown("---")
+st.write("💡 **Tip:** Check the weather before stepping out! 🚀")
+st.write("Made with ❤️ using Streamlit by AP Bhattacharya")
 
-# Run the app
-if __name__ == "__main__":
-    app()
