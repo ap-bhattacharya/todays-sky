@@ -8,9 +8,9 @@ from datetime import datetime
 
 # Set wide layout and inject animation
 st.set_page_config(page_title="Today's Sky",page_icon="🌤️", layout="wide")
-st.snow()
-st.session_state["has_snowed"] = True
-st.balloons()
+#st.snow()
+#st.session_state["has_snowed"] = True
+#st.balloons()
 
 particles_js = """<!DOCTYPE html>
 <html lang="en">
@@ -293,7 +293,21 @@ def app():
     st.markdown("---")
     st.write("💡 **Tip:** The best journeys start with a quick weather check – go explore!")
     st.write("Made with ❤️ using Streamlit by AP Bhattacharya & Jagriti")
+  
+if st.session_state.reset_trigger:
 
+    unique_key = "chat_input_" + str(hash("Snowflake Arctic is cool"))
+
+    complete_question = generate_arctic_response_follow_up()
+
+    st.session_state.show_animation = False
+if "has_snowed" not in st.session_state:
+
+    st.snow()
+    st.session_state["has_snowed"] = True
+if st.session_state.show_animation:
+    components.html(particles_js, height=370, scrolling=False)
+  
 # Run the app
 if __name__ == "__main__":
     app()
