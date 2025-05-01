@@ -151,7 +151,7 @@ particles_js = """<!DOCTYPE html>
 </html>
 """
 
-components.html(particles_js, height=300, width=0)
+#components.html(particles_js, height=300, width=0)
 
 # Load API key from .env file
 load_dotenv()
