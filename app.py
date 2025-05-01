@@ -52,20 +52,14 @@ particles_js = """<!DOCTYPE html>
           "value": "#ffffff"
         },
         "shape": {
-          "type": "circle",
-          "stroke": {
-            "width": 0,
-            "color": "#000000"
-          },
-          "polygon": {
-            "nb_sides": 5
-          },
+          "type": "image",
           "image": {
-            "src": "img/github.svg",
+            "src": "https://cdn-icons-png.flaticon.com/512/4151/4151111.png",
             "width": 100,
             "height": 100
           }
         },
+
         "opacity": {
           "value": 0.5,
           "random": false,
