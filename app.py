@@ -293,7 +293,10 @@ def app():
     st.markdown("---")
     st.write("💡 **Tip:** The best journeys start with a quick weather check – go explore!")
     st.write("Made with ❤️ using Streamlit by AP Bhattacharya & Jagriti")
-  
+
+if "reset_trigger" not in st.session_state:
+    st.session_state["reset_trigger"] = False
+
 if st.session_state.reset_trigger:
 
     unique_key = "chat_input_" + str(hash("Snowflake Arctic is cool"))
