@@ -7,7 +7,7 @@ import pytz
 from datetime import datetime
 
 # Set wide layout and inject animation
-st.set_page_config(page_title="Today's Sky", layout="wide")
+st.set_page_config(page_title="Today's Sky",page_icon="🌤️", layout="wide")
 
 particles_js = """<!DOCTYPE html>
 <html lang="en">
