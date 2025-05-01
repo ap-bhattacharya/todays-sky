@@ -297,6 +297,9 @@ def app():
 if "reset_trigger" not in st.session_state:
     st.session_state["reset_trigger"] = False
 
+if "show_animation" not in st.session_state:
+    st.session_state["show_animation"] = True
+
 if st.session_state.reset_trigger:
 
     unique_key = "chat_input_" + str(hash("Snowflake Arctic is cool"))
