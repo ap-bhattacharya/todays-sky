@@ -42,7 +42,7 @@ particles_js = """<!DOCTYPE html>
     particlesJS("particles-js", {
       "particles": {
         "number": {
-          "value": 300,
+          "value": 3000,
           "density": {
             "enable": true,
             "value_area": 800
