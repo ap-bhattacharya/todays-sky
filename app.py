@@ -10,6 +10,7 @@ from datetime import datetime
 st.set_page_config(page_title="Today's Sky",page_icon="🌤️", layout="wide")
 st.snow()
 st.session_state["has_snowed"] = True
+st.balloons()
 
 particles_js = """<!DOCTYPE html>
 <html lang="en">
