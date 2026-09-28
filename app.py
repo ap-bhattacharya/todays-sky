@@ -272,25 +272,6 @@ html, body, [data-testid="stAppViewContainer"] {
     margin-top: 24px;
 }
 
-.daylight-endpoints {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    margin-top: 10px;
-}
-
-.daylight-endpoint {
-    color: #94a3b8;
-    font-size: .78rem;
-}
-
-.daylight-endpoint strong {
-    color: #e2e8f0;
-    display: block;
-    font-size: .86rem;
-    margin-top: 2px;
-}
-
 .aqi-card-grid {
     display: grid;
     grid-template-columns: minmax(170px, 1fr) minmax(0, 2fr);
@@ -520,14 +501,35 @@ html, body, [data-testid="stAppViewContainer"] {
     }
     .forecast-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
+        gap: 10px;
     }
     .forecast-grid.five-day {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .forecast-card {
-        padding: 14px;
-        min-height: 175px;
+        padding: 12px;
+        min-height: 0;
+        height: auto;
+    }
+    .forecast-time {
+        font-size: .68rem;
+        line-height: 1.35;
+    }
+    .forecast-icon {
+        font-size: 1.7rem;
+        margin: 7px 0 2px;
+    }
+    .forecast-temp {
+        font-size: 1.35rem;
+    }
+    .forecast-desc {
+        min-height: 0;
+        font-size: .72rem;
+        line-height: 1.3;
+    }
+    .rain {
+        font-size: .68rem;
+        margin-top: 5px;
     }
     .weather-main-grid, .aqi-card-grid {
         grid-template-columns: 1fr;
@@ -540,17 +542,30 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 
 @media (max-width: 520px) {
-    .weather-info-grid, .forecast-grid, .forecast-grid.five-day, .pollutant-grid {
+    .weather-info-grid, .pollutant-grid {
         grid-template-columns: 1fr;
     }
+    .forecast-grid, .forecast-grid.five-day {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+    }
     .forecast-card {
-        min-height: 160px;
+        min-height: 0;
+        padding: 11px;
+        border-radius: 14px;
     }
     .sun-summary {
         align-items: flex-start;
+        gap: 12px;
+    }
+    .sun-time {
+        font-size: 1.15rem;
     }
     .sun-end {
         text-align: right;
+    }
+    .daylight-wrap {
+        margin-top: 20px;
     }
 }
 </style>
@@ -919,10 +934,6 @@ def render_weather(data, forecast_data, aqi_data):
             <div class="daylight-wrap">
                 <div class="daylight-track">
                     <div class="daylight-dot" style="left:{pct}%"></div>
-                </div>
-                <div class="daylight-endpoints">
-                    <div class="daylight-endpoint">Sunrise<strong>{format_time(sunrise, offset)}</strong></div>
-                    <div class="daylight-endpoint" style="text-align:right">Sunset<strong>{format_time(sunset, offset)}</strong></div>
                 </div>
                 <div class="daylight-caption" style="margin-top:12px">{caption}</div>
             </div>
