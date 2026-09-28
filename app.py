@@ -1228,7 +1228,7 @@ def app():
         """
         <div class="footer">
             💡 The best journeys start with a quick weather check — go explore!<br><br>
-            Made with ❤️ using Streamlit by AP Bhattacharya & Jagriti
+            Made with ❤️ using Streamlit by AP Bhattacharya
         </div>
         """,
         unsafe_allow_html=True,
