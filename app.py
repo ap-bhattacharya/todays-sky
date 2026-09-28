@@ -154,8 +154,8 @@ html, body, [data-testid="stAppViewContainer"] {
 
 .section-rule {
     height: 1px;
-    margin-top: 14px;
-    background: linear-gradient(90deg, rgba(96,165,250,.5), rgba(148,163,184,.12), transparent);
+    margin: 0 0 14px;
+    background: linear-gradient(90deg, rgba(96,165,250,.55), rgba(148,163,184,.14), transparent);
 }
 
 .weather-card {
@@ -227,6 +227,8 @@ html, body, [data-testid="stAppViewContainer"] {
     padding: 18px;
     background: rgba(15, 23, 42, .78);
     height: 100%;
+    min-height: 190px;
+    box-sizing: border-box;
 }
 
 .forecast-time {
@@ -304,6 +306,32 @@ html, body, [data-testid="stAppViewContainer"] {
     background: white;
     border: 4px solid #0f172a;
     box-shadow: 0 2px 10px rgba(0,0,0,.4);
+}
+
+
+.aqi-score-panel {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+.aqi-scale {
+    color: #64748b;
+    font-size: .78rem;
+    margin-top: 3px;
+}
+.aqi-note {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(96,165,250,.08);
+    color: #93c5fd;
+    font-size: .78rem;
+    line-height: 1.45;
+}
+.wind-line {
+    color: #93c5fd;
+    font-size: .78rem;
+    margin-top: 4px;
 }
 
 .sun-card {
@@ -431,7 +459,7 @@ def request_json(url, params=None, timeout=12):
         return None, f"Network error: {exc}"
 
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_data(ttl=60, show_spinner=False)
 def get_weather_data(city, api_key):
     if not api_key:
         return None, "OPENWEATHER_API_KEY is not configured."
@@ -441,17 +469,17 @@ def get_weather_data(city, api_key):
     )
 
 
-@st.cache_data(ttl=300, show_spinner=False)
-def get_forecast_data(city, api_key):
+@st.cache_data(ttl=180, show_spinner=False)
+def get_forecast_data(lat, lon, api_key):
     if not api_key:
         return None, "OPENWEATHER_API_KEY is not configured."
     return request_json(
         "https://api.openweathermap.org/data/2.5/forecast",
-        {"q": city, "appid": api_key, "units": "metric"},
+        {"lat": lat, "lon": lon, "appid": api_key, "units": "metric"},
     )
 
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_data(ttl=60, show_spinner=False)
 def get_weather_by_coords(lat, lon, api_key):
     if not api_key:
         return None, "OPENWEATHER_API_KEY is not configured."
@@ -502,14 +530,103 @@ def weather_icon(condition, icon_code=""):
     return "🌤️"
 
 
+
+def wind_direction(degrees):
+    """Convert meteorological wind degrees to a 16-point compass direction."""
+    if degrees is None:
+        return "—"
+    try:
+        deg = float(degrees) % 360
+    except (TypeError, ValueError):
+        return "—"
+    directions = [
+        "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+        "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW",
+    ]
+    return directions[int((deg + 11.25) / 22.5) % 16]
+
+
+# CPCB-style breakpoints for a user-facing estimate.
+# IMPORTANT: OpenWeather's current pollution values are point-in-time
+# concentrations, while India's official AQI is based on specified
+# averaging periods. Therefore this is explicitly an estimate, not an
+# official CPCB daily AQI.
+CPCB_BREAKPOINTS = {
+    "pm25": [(0, 30, 0, 50), (31, 60, 51, 100), (61, 90, 101, 200),
+             (91, 120, 201, 300), (121, 250, 301, 400), (251, 500, 401, 500)],
+    "pm10": [(0, 50, 0, 50), (51, 100, 51, 100), (101, 250, 101, 200),
+             (251, 350, 201, 300), (351, 430, 301, 400), (431, 1000, 401, 500)],
+    "no2": [(0, 40, 0, 50), (41, 80, 51, 100), (81, 180, 101, 200),
+            (181, 280, 201, 300), (281, 400, 301, 400), (401, 800, 401, 500)],
+    "o3": [(0, 50, 0, 50), (51, 100, 51, 100), (101, 168, 101, 200),
+           (169, 208, 201, 300), (209, 748, 301, 400), (749, 1000, 401, 500)],
+    "co": [(0, 1.0, 0, 50), (1.1, 2.0, 51, 100), (2.1, 10, 101, 200),
+           (10.1, 17, 201, 300), (17.1, 34, 301, 400), (34.1, 100, 401, 500)],
+    "so2": [(0, 40, 0, 50), (41, 80, 51, 100), (81, 380, 101, 200),
+            (381, 800, 201, 300), (801, 1600, 301, 400), (1601, 3000, 401, 500)],
+    "nh3": [(0, 200, 0, 50), (201, 400, 51, 100), (401, 800, 101, 200),
+            (801, 1200, 201, 300), (1201, 1800, 301, 400), (1801, 3000, 401, 500)],
+}
+
+def sub_index(value, breakpoints):
+    if value is None:
+        return None
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return None
+    for clo, chi, ilo, ihi in breakpoints:
+        if clo <= value <= chi:
+            if chi == clo:
+                return float(ihi)
+            return ((ihi - ilo) / (chi - clo)) * (value - clo) + ilo
+    if value > breakpoints[-1][1]:
+        return 500.0
+    return 0.0
+
+def estimated_india_aqi(components):
+    values = {
+        "pm25": components.get("pm2_5"),
+        "pm10": components.get("pm10"),
+        "no2": components.get("no2"),
+        "o3": components.get("o3"),
+        # OpenWeather CO is µg/m³; CPCB breakpoint is mg/m³.
+        "co": (components.get("co") / 1000) if components.get("co") is not None else None,
+        "so2": components.get("so2"),
+        "nh3": components.get("nh3"),
+    }
+    subindices = {
+        key: sub_index(value, CPCB_BREAKPOINTS[key])
+        for key, value in values.items()
+    }
+    valid = {k: v for k, v in subindices.items() if v is not None}
+    if not valid:
+        return None, {}
+    return round(max(valid.values())), valid
+
+def india_aqi_category(aqi):
+    if aqi is None:
+        return "Unavailable"
+    if aqi <= 50:
+        return "Good"
+    if aqi <= 100:
+        return "Satisfactory"
+    if aqi <= 200:
+        return "Moderate"
+    if aqi <= 300:
+        return "Poor"
+    if aqi <= 400:
+        return "Very Poor"
+    return "Severe"
+
 def section_header(kicker, title, subtitle=""):
     st.markdown(
         f"""
         <div class="section">
+            <div class="section-rule"></div>
             <div class="section-kicker">{kicker}</div>
             <div class="section-title">{title}</div>
             <div class="section-subtitle">{subtitle}</div>
-            <div class="section-rule"></div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -581,9 +698,17 @@ def render_weather(data, forecast_data, aqi_data):
         st.markdown(f'<div class="weather-icon">{icon}</div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
+    wind = data.get("wind", {})
+    wind_speed = float(wind.get("speed", 0) or 0)
+    wind_deg = wind.get("deg")
+    wind_dir = wind_direction(wind_deg)
+    wind_display = f'{wind_speed:.1f} m/s'
+    if wind_deg is not None:
+        wind_display += f' • {wind_dir} ({float(wind_deg):.0f}°)'
+
     cards = [
         ("Humidity", f'{main["humidity"]}%'),
-        ("Wind", f'{data["wind"].get("speed", 0):.1f} m/s'),
+        ("Wind", wind_display),
         ("Pressure", f'{main["pressure"]} hPa'),
         ("Visibility", f'{data.get("visibility", 0) / 1000:.1f} km'),
     ]
@@ -592,6 +717,7 @@ def render_weather(data, forecast_data, aqi_data):
         with col:
             info_card(label, value)
     st.markdown("</div>", unsafe_allow_html=True)
+    st.caption("Weather conditions are fetched from OpenWeather using the same coordinates used for the forecast and AQI.")
 
     # Sunrise / sunset
     section_header(
@@ -627,28 +753,64 @@ def render_weather(data, forecast_data, aqi_data):
     section_header(
         "Air quality",
         "Air quality",
-        "OpenWeather air pollution index and pollutant concentrations.",
+        "OpenWeather pollution data with an India-style AQI estimate.",
     )
 
     if aqi_data and aqi_data.get("list"):
         item = aqi_data["list"][0]
-        aqi = item["main"]["aqi"]
-        label, description, meter = aqi_info(aqi)
+        ow_aqi = int(round(item["main"]["aqi"]))
+        ow_label, ow_description, _ = aqi_info(ow_aqi)
         components = item["components"]
+        india_aqi, subindices = estimated_india_aqi(components)
+        india_label = india_aqi_category(india_aqi)
 
         st.markdown('<div class="aqi-card">', unsafe_allow_html=True)
-        top_left, top_right = st.columns([.8, 2.2], gap="large")
+        top_left, top_right = st.columns([1.0, 2.0], gap="large")
+
         with top_left:
-            st.markdown(f'<div class="aqi-number">{aqi}</div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="aqi-label">AQI • {label}</div>', unsafe_allow_html=True)
+            if india_aqi is not None:
+                st.markdown(
+                    f'<div class="aqi-number">{india_aqi}</div>'
+                    f'<div class="aqi-label">Estimated India AQI • {india_label}</div>',
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    '<div class="aqi-scale">0 Good • 51 Satisfactory • 101 Moderate • '
+                    '201 Poor • 301 Very Poor • 401 Severe</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    '<div class="aqi-number">—</div>'
+                    '<div class="aqi-label">India AQI unavailable</div>',
+                    unsafe_allow_html=True,
+                )
+
         with top_right:
-            st.markdown(f'<div class="aqi-description">{description}</div>', unsafe_allow_html=True)
             st.markdown(
-                f"""
-                <div class="aqi-meter">
-                    <div class="aqi-dot" style="left:{meter}%"></div>
-                </div>
-                """,
+                f'<div class="aqi-label">OpenWeather air quality: {ow_label} '
+                f'<span style="color:#64748b">({ow_aqi}/5)</span></div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f'<div class="aqi-description">{ow_description}</div>',
+                unsafe_allow_html=True,
+            )
+            if india_aqi is not None:
+                meter = max(0, min(100, india_aqi / 5))
+                st.markdown(
+                    f"""
+                    <div class="aqi-meter">
+                        <div class="aqi-dot" style="left:{meter}%"></div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            st.markdown(
+                '<div class="aqi-note">The numeric India AQI shown here is an '
+                'estimate from the available OpenWeather pollutant concentrations. '
+                'Official CPCB AQI uses specified averaging periods, so this should '
+                'not be treated as an official CPCB daily AQI.</div>',
                 unsafe_allow_html=True,
             )
 
@@ -661,7 +823,7 @@ def render_weather(data, forecast_data, aqi_data):
             ("CO", components.get("co", 0)),
         ]
         st.markdown("<br>", unsafe_allow_html=True)
-        cols = st.columns(6)
+        cols = st.columns(6, gap="small")
         for col, (name, value) in zip(cols, pollutant_values):
             with col:
                 info_card(name, f"{value:.1f} µg/m³")
@@ -682,7 +844,7 @@ def render_weather(data, forecast_data, aqi_data):
 
         next_24 = forecast_list[:8]
         st.markdown("<br>", unsafe_allow_html=True)
-        cols = st.columns(4)
+        cols = st.columns(4, gap="medium")
         for col, item in zip(cols, next_24[:4]):
             with col:
                 dt = local_dt(item["dt"], offset)
@@ -694,7 +856,7 @@ def render_weather(data, forecast_data, aqi_data):
                 st.markdown(
                     f"""
                     <div class="forecast-card">
-                        <div class="forecast-time">{dt.strftime("%I %p").lstrip("0")}</div>
+                        <div class="forecast-time">{dt.strftime("%a, %d %b")} • {dt.strftime("%I %p").lstrip("0")}</div>
                         <div class="forecast-icon">{icon}</div>
                         <div class="forecast-temp">{item["main"]["temp"]:.0f}°C</div>
                         <div class="forecast-desc">{item["weather"][0]["description"].capitalize()}</div>
@@ -704,7 +866,7 @@ def render_weather(data, forecast_data, aqi_data):
                     unsafe_allow_html=True,
                 )
 
-        cols = st.columns(4)
+        cols = st.columns(4, gap="medium")
         for col, item in zip(cols, next_24[4:8]):
             with col:
                 dt = local_dt(item["dt"], offset)
@@ -716,7 +878,7 @@ def render_weather(data, forecast_data, aqi_data):
                 st.markdown(
                     f"""
                     <div class="forecast-card">
-                        <div class="forecast-time">{dt.strftime("%I %p").lstrip("0")}</div>
+                        <div class="forecast-time">{dt.strftime("%a, %d %b")} • {dt.strftime("%I %p").lstrip("0")}</div>
                         <div class="forecast-icon">{icon}</div>
                         <div class="forecast-temp">{item["main"]["temp"]:.0f}°C</div>
                         <div class="forecast-desc">{item["weather"][0]["description"].capitalize()}</div>
@@ -863,10 +1025,14 @@ def app():
 
         accuracy = st.session_state.get("location_accuracy")
         if accuracy:
-            st.caption(f"📍 Location detected from your device • accuracy about {float(accuracy):.0f} m")
+            accuracy = float(accuracy)
+            if accuracy <= 5000:
+                st.caption(f"📍 Location detected from your device • accuracy about {accuracy:.0f} m")
+            else:
+                st.caption("📍 Location detected • your browser returned a low-precision location, so weather is based on the nearest resolved coordinates.")
 
         with st.spinner("Updating forecast and air quality..."):
-            forecast_data, forecast_error = get_forecast_data(city, API_KEY)
+            forecast_data, forecast_error = get_forecast_data(lat, lon, API_KEY)
             aqi_data, aqi_error = get_aqi_data(lat, lon, API_KEY)
 
         render_weather(data, forecast_data, aqi_data)
