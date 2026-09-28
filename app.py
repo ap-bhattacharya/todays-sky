@@ -116,12 +116,16 @@ html, body, [data-testid="stAppViewContainer"] {
     font-size: 1rem;
 }
 
-.search-panel {
-    border: 1px solid var(--sky-border);
-    border-radius: 18px;
-    padding: 14px;
-    background: rgba(15, 23, 42, .72);
-    margin-bottom: 26px;
+.search-panel { margin-bottom: 26px; }
+
+/* Streamlit widgets cannot be reliably wrapped by raw markdown HTML.
+   Style the real form so no empty wrapper box is rendered. */
+[data-testid="stForm"] {
+    border: 1px solid var(--sky-border) !important;
+    border-radius: 18px !important;
+    padding: 14px !important;
+    background: rgba(15, 23, 42, .72) !important;
+    margin-bottom: 26px !important;
 }
 
 .section {
@@ -493,9 +497,21 @@ html, body, [data-testid="stAppViewContainer"] {
         font-size: 4.2rem;
     }
     .weather-card, .aqi-card, .sun-card {
-        padding: 20px;
-        border-radius: 20px;
+        padding: 16px;
+        border-radius: 18px;
     }
+    .weather-main-grid { gap: 10px; }
+    .weather-info-grid { gap: 8px; margin-top: 16px; }
+    .info-card { min-height: 68px; padding: 11px 12px; border-radius: 13px; }
+    .info-value { font-size: .98rem; margin-top: 4px; }
+    .aqi-card-grid { gap: 18px; }
+    .aqi-card { padding: 16px; }
+    .pollutant-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 14px;
+    }
+    .pollutant-grid .info-card { min-height: 0; }
     .section {
         margin-top: 25px;
     }
@@ -542,31 +558,31 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 
 @media (max-width: 520px) {
-    .weather-info-grid, .pollutant-grid {
-        grid-template-columns: 1fr;
+    .block-container {
+        padding-left: .55rem;
+        padding-right: .55rem;
     }
+    .weather-info-grid, .pollutant-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+    }
+    .info-card { padding: 10px; min-height: 64px; }
+    .info-label { font-size: .64rem; }
+    .info-value { font-size: .88rem; line-height: 1.25; overflow-wrap: anywhere; }
+    .weather-card, .aqi-card, .sun-card { padding: 13px; border-radius: 16px; }
+    .current-temp { font-size: 3.5rem; }
+    .weather-icon { font-size: 2.8rem; }
+    .aqi-number { font-size: 3.25rem; }
+    .aqi-score-panel { gap: 8px; flex-wrap: wrap; }
     .forecast-grid, .forecast-grid.five-day {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 9px;
+        gap: 7px;
     }
-    .forecast-card {
-        min-height: 0;
-        padding: 11px;
-        border-radius: 14px;
-    }
-    .sun-summary {
-        align-items: flex-start;
-        gap: 12px;
-    }
-    .sun-time {
-        font-size: 1.15rem;
-    }
-    .sun-end {
-        text-align: right;
-    }
-    .daylight-wrap {
-        margin-top: 20px;
-    }
+    .forecast-card { min-height: 0; padding: 10px; border-radius: 13px; }
+    .sun-summary { align-items: flex-start; gap: 12px; }
+    .sun-time { font-size: 1.05rem; }
+    .sun-end { text-align: right; }
+    .daylight-wrap { margin-top: 18px; }
 }
 </style>
 """,
@@ -1087,7 +1103,6 @@ def app():
         unsafe_allow_html=True,
     )
 
-    st.markdown('<div class="search-panel">', unsafe_allow_html=True)
     with st.form("city_search", clear_on_submit=False):
         c1, c2 = st.columns([5, 1])
         with c1:
@@ -1098,7 +1113,6 @@ def app():
             )
         with c2:
             submitted = st.form_submit_button("🔎 Search", use_container_width=True)
-    st.markdown("</div>", unsafe_allow_html=True)
 
     # Browser GPS lookup. The local component owns the visible button and
     # directly calls navigator.geolocation.getCurrentPosition(). This avoids
