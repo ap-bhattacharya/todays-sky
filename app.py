@@ -125,8 +125,8 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 
 .section {
-    margin-top: 30px;
-    margin-bottom: 12px;
+    margin-top: 34px;
+    margin-bottom: 14px;
 }
 
 .section-kicker {
@@ -231,6 +231,80 @@ html, body, [data-testid="stAppViewContainer"] {
     box-sizing: border-box;
 }
 
+.forecast-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    width: 100%;
+    margin-top: 2px;
+}
+
+.forecast-grid.five-day {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.weather-main-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(180px, 1fr);
+    gap: 28px;
+    align-items: center;
+}
+
+.weather-info-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.sun-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+}
+
+.sun-end {
+    text-align: right;
+}
+
+.daylight-wrap {
+    margin-top: 24px;
+}
+
+.daylight-endpoints {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 10px;
+}
+
+.daylight-endpoint {
+    color: #94a3b8;
+    font-size: .78rem;
+}
+
+.daylight-endpoint strong {
+    color: #e2e8f0;
+    display: block;
+    font-size: .86rem;
+    margin-top: 2px;
+}
+
+.aqi-card-grid {
+    display: grid;
+    grid-template-columns: minmax(170px, 1fr) minmax(0, 2fr);
+    gap: 32px;
+    align-items: center;
+}
+
+.pollutant-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 18px;
+}
+
 .forecast-time {
     color: #93c5fd;
     font-size: .75rem;
@@ -290,11 +364,22 @@ html, body, [data-testid="stAppViewContainer"] {
 
 .aqi-meter {
     margin-top: 22px;
-    height: 10px;
+    height: 12px;
     border-radius: 99px;
-    background: linear-gradient(90deg, #22c55e 0 20%, #eab308 20% 40%, #f97316 40% 60%, #ef4444 60% 80%, #a855f7 80% 92%, #334155 92% 100%);
+    background: linear-gradient(90deg,
+        #22c55e 0%,
+        #4ade80 10%,
+        #a3e635 20%,
+        #eab308 35%,
+        #facc15 42%,
+        #f97316 58%,
+        #fb7185 68%,
+        #ef4444 82%,
+        #b91c1c 100%);
+    box-shadow: inset 0 0 18px rgba(255,255,255,.08);
     position: relative;
 }
+
 
 .aqi-dot {
     position: absolute;
@@ -361,7 +446,7 @@ html, body, [data-testid="stAppViewContainer"] {
     height: 12px;
     margin: 24px 0 9px;
     border-radius: 99px;
-    background: linear-gradient(90deg, #1e293b, #fbbf24, #f59e0b, #1e293b);
+    background: linear-gradient(90deg, #172033 0%, #d59b22 18%, #fbbf24 38%, #f59e0b 62%, #d59b22 82%, #172033 100%);
 }
 
 .daylight-dot {
@@ -400,6 +485,18 @@ html, body, [data-testid="stAppViewContainer"] {
     text-align: center;
 }
 
+@media (max-width: 1000px) {
+    .forecast-grid.five-day {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .weather-info-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .pollutant-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 768px) {
     .block-container {
         padding: 1rem .75rem 2.5rem;
@@ -414,18 +511,46 @@ html, body, [data-testid="stAppViewContainer"] {
     .current-temp {
         font-size: 4.2rem;
     }
-    .weather-card, .aqi-card {
+    .weather-card, .aqi-card, .sun-card {
         padding: 20px;
         border-radius: 20px;
     }
     .section {
         margin-top: 25px;
     }
+    .forecast-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+    .forecast-grid.five-day {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
     .forecast-card {
         padding: 14px;
+        min-height: 175px;
+    }
+    .weather-main-grid, .aqi-card-grid {
+        grid-template-columns: 1fr;
     }
     .weather-icon {
         font-size: 3.3rem;
+        text-align: left;
+        margin-top: 0;
+    }
+}
+
+@media (max-width: 520px) {
+    .weather-info-grid, .forecast-grid, .forecast-grid.five-day, .pollutant-grid {
+        grid-template-columns: 1fr;
+    }
+    .forecast-card {
+        min-height: 160px;
+    }
+    .sun-summary {
+        align-items: flex-start;
+    }
+    .sun-end {
+        text-align: right;
     }
 }
 </style>
@@ -679,25 +804,6 @@ def render_weather(data, forecast_data, aqi_data):
         "Live weather conditions and atmospheric details.",
     )
 
-    st.markdown('<div class="weather-card">', unsafe_allow_html=True)
-    left, right = st.columns([1.7, 1], gap="large")
-
-    with left:
-        st.markdown(
-            f'<div class="location-line">CURRENT WEATHER • {format_time(data["dt"], offset)}</div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown(f'<div class="current-temp">{main["temp"]:.0f}°C</div>', unsafe_allow_html=True)
-        st.markdown(
-            f'<div class="condition">{condition["description"]}</div>'
-            f'<div class="feels">Feels like {main["feels_like"]:.0f}°C</div>',
-            unsafe_allow_html=True,
-        )
-
-    with right:
-        st.markdown(f'<div class="weather-icon">{icon}</div>', unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
     wind = data.get("wind", {})
     wind_speed = float(wind.get("speed", 0) or 0)
     wind_deg = wind.get("deg")
@@ -706,17 +812,34 @@ def render_weather(data, forecast_data, aqi_data):
     if wind_deg is not None:
         wind_display += f' • {wind_dir} ({float(wind_deg):.0f}°)'
 
-    cards = [
+    weather_cards = [
         ("Humidity", f'{main["humidity"]}%'),
         ("Wind", wind_display),
         ("Pressure", f'{main["pressure"]} hPa'),
         ("Visibility", f'{data.get("visibility", 0) / 1000:.1f} km'),
     ]
-    cols = st.columns(4)
-    for col, (label, value) in zip(cols, cards):
-        with col:
-            info_card(label, value)
-    st.markdown("</div>", unsafe_allow_html=True)
+    weather_info_html = "".join(
+        f'<div class="info-card"><div class="info-label">{label}</div><div class="info-value">{value}</div></div>'
+        for label, value in weather_cards
+    )
+
+    st.markdown(
+        f"""
+        <div class="weather-card">
+            <div class="weather-main-grid">
+                <div>
+                    <div class="location-line">CURRENT WEATHER • {format_time(data["dt"], offset)}</div>
+                    <div class="current-temp">{main["temp"]:.0f}°C</div>
+                    <div class="condition">{condition["description"]}</div>
+                    <div class="feels">Feels like {main["feels_like"]:.0f}°C</div>
+                </div>
+                <div class="weather-icon">{icon}</div>
+            </div>
+            <div class="weather-info-grid">{weather_info_html}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     st.caption("Weather conditions are fetched from OpenWeather using the same coordinates used for the forecast and AQI.")
 
     # Sunrise / sunset
@@ -730,24 +853,33 @@ def render_weather(data, forecast_data, aqi_data):
     current = data["dt"]
     pct, caption = daylight_position(current, sunrise, sunset)
 
-    st.markdown('<div class="sun-card">', unsafe_allow_html=True)
-    s1, s2 = st.columns(2)
-    with s1:
-        st.markdown('<div class="sun-label">🌅 Sunrise</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="sun-time">{format_time(sunrise, offset)}</div>', unsafe_allow_html=True)
-    with s2:
-        st.markdown('<div class="sun-label">🌇 Sunset</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="sun-time">{format_time(sunset, offset)}</div>', unsafe_allow_html=True)
     st.markdown(
         f"""
-        <div class="daylight-track">
-            <div class="daylight-dot" style="left:{pct}%"></div>
+        <div class="sun-card">
+            <div class="sun-summary">
+                <div>
+                    <div class="sun-label">🌅 Sunrise</div>
+                    <div class="sun-time">{format_time(sunrise, offset)}</div>
+                </div>
+                <div class="sun-end">
+                    <div class="sun-label">🌇 Sunset</div>
+                    <div class="sun-time">{format_time(sunset, offset)}</div>
+                </div>
+            </div>
+            <div class="daylight-wrap">
+                <div class="daylight-track">
+                    <div class="daylight-dot" style="left:{pct}%"></div>
+                </div>
+                <div class="daylight-endpoints">
+                    <div class="daylight-endpoint">Sunrise<strong>{format_time(sunrise, offset)}</strong></div>
+                    <div class="daylight-endpoint" style="text-align:right">Sunset<strong>{format_time(sunset, offset)}</strong></div>
+                </div>
+                <div class="daylight-caption" style="margin-top:12px">{caption}</div>
+            </div>
         </div>
-        <div class="daylight-caption">{caption}</div>
         """,
         unsafe_allow_html=True,
     )
-    st.markdown("</div>", unsafe_allow_html=True)
 
     # AQI
     section_header(
@@ -764,55 +896,21 @@ def render_weather(data, forecast_data, aqi_data):
         india_aqi, subindices = estimated_india_aqi(components)
         india_label = india_aqi_category(india_aqi)
 
-        st.markdown('<div class="aqi-card">', unsafe_allow_html=True)
-        top_left, top_right = st.columns([1.0, 2.0], gap="large")
-
-        with top_left:
-            if india_aqi is not None:
-                st.markdown(
-                    f'<div class="aqi-number">{india_aqi}</div>'
-                    f'<div class="aqi-label">Estimated India AQI • {india_label}</div>',
-                    unsafe_allow_html=True,
-                )
-                st.markdown(
-                    '<div class="aqi-scale">0 Good • 51 Satisfactory • 101 Moderate • '
-                    '201 Poor • 301 Very Poor • 401 Severe</div>',
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.markdown(
-                    '<div class="aqi-number">—</div>'
-                    '<div class="aqi-label">India AQI unavailable</div>',
-                    unsafe_allow_html=True,
-                )
-
-        with top_right:
-            st.markdown(
-                f'<div class="aqi-label">OpenWeather air quality: {ow_label} '
-                f'<span style="color:#64748b">({ow_aqi}/5)</span></div>',
-                unsafe_allow_html=True,
+        if india_aqi is not None:
+            score_html = (
+                f'<div class="aqi-number">{india_aqi}</div>'
+                f'<div class="aqi-label">Estimated India AQI • {india_label}</div>'
+                '<div class="aqi-scale">0 Good • 51 Satisfactory • 101 Moderate • '
+                '201 Poor • 301 Very Poor • 401 Severe</div>'
             )
-            st.markdown(
-                f'<div class="aqi-description">{ow_description}</div>',
-                unsafe_allow_html=True,
+            meter = max(0, min(100, india_aqi / 5))
+            meter_html = f'<div class="aqi-meter"><div class="aqi-dot" style="left:{meter}%"></div></div>'
+        else:
+            score_html = (
+                '<div class="aqi-number">—</div>'
+                '<div class="aqi-label">India AQI unavailable</div>'
             )
-            if india_aqi is not None:
-                meter = max(0, min(100, india_aqi / 5))
-                st.markdown(
-                    f"""
-                    <div class="aqi-meter">
-                        <div class="aqi-dot" style="left:{meter}%"></div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-            st.markdown(
-                '<div class="aqi-note">The numeric India AQI shown here is an '
-                'estimate from the available OpenWeather pollutant concentrations. '
-                'Official CPCB AQI uses specified averaging periods, so this should '
-                'not be treated as an official CPCB daily AQI.</div>',
-                unsafe_allow_html=True,
-            )
+            meter_html = ''
 
         pollutant_values = [
             ("PM2.5", components.get("pm2_5", 0)),
@@ -822,12 +920,29 @@ def render_weather(data, forecast_data, aqi_data):
             ("SO₂", components.get("so2", 0)),
             ("CO", components.get("co", 0)),
         ]
-        st.markdown("<br>", unsafe_allow_html=True)
-        cols = st.columns(6, gap="small")
-        for col, (name, value) in zip(cols, pollutant_values):
-            with col:
-                info_card(name, f"{value:.1f} µg/m³")
-        st.markdown("</div>", unsafe_allow_html=True)
+        pollutant_html = "".join(
+            f'<div class="info-card"><div class="info-label">{name}</div><div class="info-value">{value:.1f} µg/m³</div></div>'
+            for name, value in pollutant_values
+        )
+
+        st.markdown(
+            f"""
+            <div class="aqi-card">
+                <div class="aqi-card-grid">
+                    <div>{score_html}</div>
+                    <div>
+                        <div class="aqi-label">OpenWeather air quality: {ow_label} <span style="color:#64748b">({ow_aqi}/5)</span></div>
+                        <div class="aqi-description">{ow_description}</div>
+                        {meter_html}
+                        <div class="aqi-note">The numeric India AQI shown here is an estimate from the available OpenWeather pollutant concentrations. Official CPCB AQI uses specified averaging periods, so this should not be treated as an official CPCB daily AQI.</div>
+                    </div>
+                </div>
+                <div class="pollutant-grid">{pollutant_html}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
     else:
         st.warning("Air quality data is currently unavailable.")
 
@@ -843,50 +958,24 @@ def render_weather(data, forecast_data, aqi_data):
         )
 
         next_24 = forecast_list[:8]
-        st.markdown("<br>", unsafe_allow_html=True)
-        cols = st.columns(4, gap="medium")
-        for col, item in zip(cols, next_24[:4]):
-            with col:
-                dt = local_dt(item["dt"], offset)
-                icon = weather_icon(
-                    item["weather"][0].get("description", ""),
-                    item["weather"][0].get("icon", ""),
-                )
-                rain = item.get("rain", {}).get("3h", 0)
-                st.markdown(
-                    f"""
-                    <div class="forecast-card">
-                        <div class="forecast-time">{dt.strftime("%a, %d %b")} • {dt.strftime("%I %p").lstrip("0")}</div>
-                        <div class="forecast-icon">{icon}</div>
-                        <div class="forecast-temp">{item["main"]["temp"]:.0f}°C</div>
-                        <div class="forecast-desc">{item["weather"][0]["description"].capitalize()}</div>
-                        <div class="rain">💧 {rain:.2f} mm</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-        cols = st.columns(4, gap="medium")
-        for col, item in zip(cols, next_24[4:8]):
-            with col:
-                dt = local_dt(item["dt"], offset)
-                icon = weather_icon(
-                    item["weather"][0].get("description", ""),
-                    item["weather"][0].get("icon", ""),
-                )
-                rain = item.get("rain", {}).get("3h", 0)
-                st.markdown(
-                    f"""
-                    <div class="forecast-card">
-                        <div class="forecast-time">{dt.strftime("%a, %d %b")} • {dt.strftime("%I %p").lstrip("0")}</div>
-                        <div class="forecast-icon">{icon}</div>
-                        <div class="forecast-temp">{item["main"]["temp"]:.0f}°C</div>
-                        <div class="forecast-desc">{item["weather"][0]["description"].capitalize()}</div>
-                        <div class="rain">💧 {rain:.2f} mm</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+        forecast_cards = []
+        for item in next_24:
+            dt = local_dt(item["dt"], offset)
+            icon = weather_icon(
+                item["weather"][0].get("description", ""),
+                item["weather"][0].get("icon", ""),
+            )
+            rain = item.get("rain", {}).get("3h", 0)
+            forecast_cards.append(
+                f"""<div class="forecast-card">
+                    <div class="forecast-time">{dt.strftime("%a, %d %b")} • {dt.strftime("%I %p").lstrip("0")}</div>
+                    <div class="forecast-icon">{icon}</div>
+                    <div class="forecast-temp">{item["main"]["temp"]:.0f}°C</div>
+                    <div class="forecast-desc">{item["weather"][0]["description"].capitalize()}</div>
+                    <div class="rain">💧 {rain:.2f} mm</div>
+                </div>"""
+            )
+        st.markdown(f'<div class="forecast-grid">{"".join(forecast_cards)}</div>', unsafe_allow_html=True)
 
         # 5-day forecast
         section_header(
@@ -901,28 +990,25 @@ def render_weather(data, forecast_data, aqi_data):
             grouped.setdefault(day, []).append(item)
 
         daily = list(grouped.items())[:5]
-        cols = st.columns(5)
-        for col, (day, items) in zip(cols, daily):
-            with col:
-                high = max(x["main"]["temp_max"] for x in items)
-                low = min(x["main"]["temp_min"] for x in items)
-                representative = items[len(items) // 2]
-                icon = weather_icon(
-                    representative["weather"][0].get("description", ""),
-                    representative["weather"][0].get("icon", ""),
-                )
-                desc = representative["weather"][0]["description"].capitalize()
-                st.markdown(
-                    f"""
-                    <div class="forecast-card">
-                        <div class="forecast-time">{day.strftime("%a • %d %b")}</div>
-                        <div class="forecast-icon">{icon}</div>
-                        <div class="forecast-temp">{high:.0f}° / {low:.0f}°</div>
-                        <div class="forecast-desc">{desc}</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+        daily_cards = []
+        for day, items in daily:
+            high = max(x["main"]["temp_max"] for x in items)
+            low = min(x["main"]["temp_min"] for x in items)
+            representative = items[len(items) // 2]
+            icon = weather_icon(
+                representative["weather"][0].get("description", ""),
+                representative["weather"][0].get("icon", ""),
+            )
+            desc = representative["weather"][0]["description"].capitalize()
+            daily_cards.append(
+                f"""<div class="forecast-card">
+                    <div class="forecast-time">{day.strftime("%a • %d %b")}</div>
+                    <div class="forecast-icon">{icon}</div>
+                    <div class="forecast-temp">{high:.0f}° / {low:.0f}°</div>
+                    <div class="forecast-desc">{desc}</div>
+                </div>"""
+            )
+        st.markdown(f'<div class="forecast-grid five-day">{"".join(daily_cards)}</div>', unsafe_allow_html=True)
 
 
 def app():
