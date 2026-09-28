@@ -6,11 +6,16 @@ import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 
-# Optional browser-geolocation component.
-try:
-    from streamlit_geolocation import streamlit_geolocation
-except ImportError:
-    streamlit_geolocation = None
+# Browser geolocation component.
+# This is a small local Streamlit component so the app's own
+# "Use my location" button directly calls navigator.geolocation.
+import streamlit.components.v1 as components
+from pathlib import Path
+
+_LOCATION_COMPONENT = components.declare_component(
+    "sky_location",
+    path=str(Path(__file__).parent / "sky_location"),
+)
 
 load_dotenv()
 API_KEY = os.getenv("OPENWEATHER_API_KEY")
@@ -812,37 +817,45 @@ def app():
             submitted = st.form_submit_button("🔎 Search", use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Location lookup: browser GPS if streamlit-geolocation is installed.
-    loc_col, note_col = st.columns([1.1, 2.9])
-    with loc_col:
-        use_location = st.button("📍 Use my location", use_container_width=True)
-    with note_col:
-        if streamlit_geolocation is None:
-            st.caption("For precise browser location, install: pip install streamlit-geolocation")
-        else:
-            st.caption("Uses your browser's location permission; no IP geolocation service is required.")
+    # Browser GPS lookup. The local component owns the visible button and
+    # directly calls navigator.geolocation.getCurrentPosition(). This avoids
+    # the extra crosshair button from streamlit-geolocation.
+    location = _LOCATION_COMPONENT(
+        key="sky_location_button",
+        button_label="📍 Use my location",
+    )
 
-    if use_location:
-        if streamlit_geolocation is None:
-            st.error("Install `streamlit-geolocation` and restart the app to enable browser location.")
-        else:
-            location = streamlit_geolocation()
-            if location and location.get("latitude") is not None and location.get("longitude") is not None:
-                with st.spinner("Finding your location..."):
-                    data, error = get_weather_by_coords(
-                        float(location["latitude"]),
-                        float(location["longitude"]),
-                        API_KEY,
-                    )
+    if location:
+        if location.get("latitude") is not None and location.get("longitude") is not None:
+            lat = float(location["latitude"])
+            lon = float(location["longitude"])
+            location_key = (round(lat, 5), round(lon, 5))
+
+            # Streamlit reruns after the component sends its value. The component
+            # may return the same value on that rerun, so only process a new
+            # coordinate pair once to avoid an API/rerun loop.
+            if location_key != st.session_state.get("last_location_key"):
+                st.session_state["last_location_key"] = location_key
+                with st.spinner("Finding your location and loading weather..."):
+                    data, error = get_weather_by_coords(lat, lon, API_KEY)
                 if data:
                     st.session_state["weather_data"] = data
                     st.session_state["selected_city"] = data["name"]
+                    st.session_state["location_accuracy"] = location.get("accuracy")
+                    st.rerun()
                 elif error:
                     st.error(error)
-            elif location and location.get("error"):
-                st.error(f"Location permission/error: {location['error']}")
+        elif location.get("error"):
+            code = location["error"].get("code")
+            message = location["error"].get("message", "Unable to determine your location.")
+            if code == 1:
+                st.warning("Location permission was denied. Allow location access for this site and try again.")
+            elif code == 2:
+                st.warning("Your device could not determine the location. Check GPS/location services and try again.")
+            elif code == 3:
+                st.warning("Location request timed out. Please try again.")
             else:
-                st.info("Please allow location access in your browser.")
+                st.warning(f"Location unavailable: {message}")
 
     if submitted and city_input.strip():
         with st.spinner("Loading weather..."):
@@ -873,6 +886,10 @@ def app():
     else:
         city = data["name"]
         lat, lon = data["coord"]["lat"], data["coord"]["lon"]
+
+        accuracy = st.session_state.get("location_accuracy")
+        if accuracy:
+            st.caption(f"📍 Location detected from your device • accuracy about {float(accuracy):.0f} m")
 
         with st.spinner("Updating forecast and air quality..."):
             forecast_data, forecast_error = get_forecast_data(city, API_KEY)
