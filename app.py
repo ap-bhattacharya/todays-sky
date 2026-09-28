@@ -2,7 +2,6 @@
 import os
 from datetime import datetime, timezone, timedelta
 import requests
-import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -354,12 +353,6 @@ html, body, [data-testid="stAppViewContainer"] {
     font-size: .82rem;
 }
 
-.chart-wrap {
-    border: 1px solid var(--sky-border);
-    border-radius: 22px;
-    padding: 18px 18px 8px;
-    background: rgba(15, 23, 42, .72);
-}
 
 .empty-state {
     border: 1px dashed rgba(148,163,184,.22);
@@ -688,25 +681,6 @@ def render_weather(data, forecast_data, aqi_data):
         )
 
         next_24 = forecast_list[:8]
-        # chart
-        labels = [
-            local_dt(item["dt"], offset).strftime("%I %p").lstrip("0")
-            for item in next_24
-        ]
-        temps = [round(item["main"]["temp"], 1) for item in next_24]
-
-        st.markdown('<div class="chart-wrap">', unsafe_allow_html=True)
-        st.markdown("**Temperature trend**")
-        chart_df = pd.DataFrame({"Time": labels, "Temperature (°C)": temps})
-        st.line_chart(
-            chart_df,
-            x="Time",
-            y="Temperature (°C)",
-            use_container_width=True,
-            height=280,
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
-
         st.markdown("<br>", unsafe_allow_html=True)
         cols = st.columns(4)
         for col, item in zip(cols, next_24[:4]):
