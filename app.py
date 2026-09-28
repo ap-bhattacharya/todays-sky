@@ -584,14 +584,64 @@ def request_json(url, params=None, timeout=12):
         return None, f"Network error: {exc}"
 
 
-@st.cache_data(ttl=60, show_spinner=False)
-def get_weather_data(city, api_key):
+@st.cache_data(ttl=600, show_spinner=False)
+def geocode_city(city, api_key):
+    """Resolve a city name to OpenWeather's canonical coordinates.
+
+    Search mode deliberately uses the OpenWeather Geocoding API first instead
+    of the deprecated weather-by-city-name lookup. This gives current weather,
+    forecast and AQI one canonical lat/lon pair for the searched place.
+    """
     if not api_key:
         return None, "OPENWEATHER_API_KEY is not configured."
-    return request_json(
-        "https://api.openweathermap.org/data/2.5/weather",
-        {"q": city, "appid": api_key, "units": "metric"},
+
+    query = city.strip()
+    if not query:
+        return None, "Please enter a city name."
+
+    result, error = request_json(
+        "https://api.openweathermap.org/geo/1.0/direct",
+        {"q": query, "limit": 5, "appid": api_key},
     )
+    if error:
+        return None, error
+    if not result:
+        return None, "City not found. Please check the spelling."
+
+    # Prefer an exact city-name match when the API returns several candidates.
+    query_name = query.split(",")[0].strip().casefold()
+    exact = [
+        item for item in result
+        if str(item.get("name", "")).strip().casefold() == query_name
+    ]
+    selected = exact[0] if exact else result[0]
+
+    return selected, None
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def get_weather_data_by_search(city, api_key):
+    """Search a city, then fetch current weather using its resolved coordinates."""
+    location, error = geocode_city(city, api_key)
+    if error or not location:
+        return None, error or "City not found. Please check the spelling."
+
+    lat = float(location["lat"])
+    lon = float(location["lon"])
+    weather, weather_error = get_weather_by_coords(lat, lon, api_key)
+    if weather_error:
+        return None, weather_error
+
+    # Keep the canonical geocoded place metadata with the weather response so
+    # the UI can show exactly what location was searched/resolved.
+    weather["_search_location"] = {
+        "name": location.get("name"),
+        "state": location.get("state"),
+        "country": location.get("country"),
+        "lat": lat,
+        "lon": lon,
+    }
+    return weather, None
 
 
 @st.cache_data(ttl=180, show_spinner=False)
@@ -1064,6 +1114,7 @@ def app():
                     st.session_state["weather_data"] = data
                     st.session_state["selected_city"] = data["name"]
                     st.session_state["location_accuracy"] = location.get("accuracy")
+                    st.session_state["location_source"] = "browser"
                     st.rerun()
                 elif error:
                     st.error(error)
@@ -1080,11 +1131,17 @@ def app():
                 st.warning(f"Location unavailable: {message}")
 
     if submitted and city_input.strip():
-        with st.spinner("Loading weather..."):
-            data, error = get_weather_data(city_input.strip(), API_KEY)
+        # City searches are resolved through OpenWeather's Geocoding API first.
+        # We then request current weather by the returned coordinates so the
+        # current conditions, forecast and AQI all use exactly the same point.
+        with st.spinner("Resolving city and loading weather..."):
+            data, error = get_weather_data_by_search(city_input.strip(), API_KEY)
         if data:
             st.session_state["weather_data"] = data
-            st.session_state["selected_city"] = data["name"]
+            st.session_state["selected_city"] = data.get("name", city_input.strip())
+            st.session_state["location_accuracy"] = None
+            st.session_state["location_source"] = "search"
+            st.session_state["last_location_key"] = None
         elif error:
             st.error(error)
 
@@ -1110,12 +1167,26 @@ def app():
         lat, lon = data["coord"]["lat"], data["coord"]["lon"]
 
         accuracy = st.session_state.get("location_accuracy")
-        if accuracy:
-            accuracy = float(accuracy)
-            if accuracy <= 5000:
-                st.caption(f"📍 Location detected from your device • accuracy about {accuracy:.0f} m")
-            else:
-                st.caption("📍 Location detected • your browser returned a low-precision location, so weather is based on the nearest resolved coordinates.")
+        location_source = st.session_state.get("location_source")
+        if location_source == "browser":
+            if accuracy:
+                accuracy = float(accuracy)
+                if accuracy <= 5000:
+                    st.caption(f"📍 Location detected from your device • accuracy about {accuracy:.0f} m")
+                else:
+                    st.caption("📍 Location detected • your browser returned a low-precision location, so weather is based on the nearest resolved coordinates.")
+        elif location_source == "search":
+            search_location = data.get("_search_location", {})
+            search_name = search_location.get("name") or city
+            search_state = search_location.get("state")
+            search_country = search_location.get("country")
+            location_label = ", ".join(
+                part for part in [search_name, search_state, search_country] if part
+            )
+            st.caption(
+                f"🔎 City search resolved by OpenWeather Geocoding • {location_label} • "
+                f"coordinates {lat:.5f}, {lon:.5f}"
+            )
 
         with st.spinner("Updating forecast and air quality..."):
             forecast_data, forecast_error = get_forecast_data(lat, lon, API_KEY)
@@ -1142,4 +1213,10 @@ def app():
 if __name__ == "__main__":
     if "weather_data" not in st.session_state:
         st.session_state["weather_data"] = None
+    if "location_source" not in st.session_state:
+        st.session_state["location_source"] = None
+    if "location_accuracy" not in st.session_state:
+        st.session_state["location_accuracy"] = None
+    if "last_location_key" not in st.session_state:
+        st.session_state["last_location_key"] = None
     app()
