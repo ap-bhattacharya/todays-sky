@@ -12,154 +12,173 @@ st.set_page_config(page_title="Today's Sky",page_icon="🌤️", layout="wide")
 #st.session_state["has_snowed"] = True
 #st.balloons()
 
-particles_js = """<!DOCTYPE html>
+particles_js = """
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Particles.js</title>
+
   <style>
-  #particles-js {
-    position: fixed;
-    width: 100vw;
-    height: 100vh;
-    top: 0;
-    left: 0;
-    z-index: -1; /* Send the animation to the back */
-  }
-  .content {
-    position: relative;
-    z-index: 1;
-    color: white;
-  }
-  
-</style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    #particles-js {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 430px;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    canvas {
+      display: block;
+      pointer-events: none;
+    }
+  </style>
 </head>
+
 <body>
   <div id="particles-js"></div>
-  <div class="content">
-    <!-- Placeholder for Streamlit content -->
-  </div>
+
   <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+
   <script>
-    particlesJS("particles-js", {
-      "particles": {
-        "number": {
-          "value": 500,
-          "density": {
-            "enable": true,
-            "value_area": 800
-          }
-        },
-        "color": {
-          "value": "#ffffff"
-        },
-        "shape": {
-          "type": "circle",
-          "stroke": {
-            "width": 0,
-            "color": "#000000"
-          },
-          "polygon": {
-            "nb_sides": 5
-          },
-          "image": {
-            "src": "img/github.svg",
-            "width": 100,
-            "height": 100
-          }
-        },
+    function setupParticles() {
+      if (typeof particlesJS === "undefined") {
+        setTimeout(setupParticles, 100);
+        return;
+      }
 
-
-        "opacity": {
-          "value": 0.5,
-          "random": false,
-          "anim": {
-            "enable": false,
-            "speed": 1,
-            "opacity_min": 0.2,
-            "sync": false
-          }
-        },
-        "size": {
-          "value": 2,
-          "random": true,
-          "anim": {
-            "enable": false,
-            "speed": 40,
-            "size_min": 0.1,
-            "sync": false
-          }
-        },
-        "line_linked": {
-          "enable": true,
-          "distance": 100,
-          "color": "#ffffff",
-          "opacity": 0.22,
-          "width": 1
-        },
-        "move": {
-          "enable": true,
-          "speed": 1,
-          "direction": "none",
-          "random": false,
-          "straight": false,
-          "out_mode": "out",
-          "bounce": true,
-          "attract": {
-            "enable": false,
-            "rotateX": 600,
-            "rotateY": 1200
-          }
-        }
-      },
-      "interactivity": {
-        "detect_on": "canvas",
-        "events": {
-          "onhover": {
-            "enable": true,
-            "mode": "grab"
-          },
-          "onclick": {
-            "enable": true,
-            "mode": "repulse"
-          },
-          "resize": true
-        },
-        "modes": {
-          "grab": {
-            "distance": 100,
-            "line_linked": {
-              "opacity": 1
+      particlesJS("particles-js", {
+        "particles": {
+          "number": {
+            "value": 500,
+            "density": {
+              "enable": true,
+              "value_area": 900
             }
           },
-          "bubble": {
-            "distance": 400,
-            "size": 2,
-            "duration": 2,
-            "opacity": 0.5,
-            "speed": 1
+          "color": {
+            "value": "#ffffff"
           },
-          "repulse": {
-            "distance": 200,
-            "duration": 0.4
+          "shape": {
+            "type": "circle"
           },
-          "push": {
-            "particles_nb": 2
+          "opacity": {
+            "value": 0.45,
+            "random": true,
+            "anim": {
+              "enable": false
+            }
           },
-          "remove": {
-            "particles_nb": 3
+          "size": {
+            "value": 2,
+            "random": true
+          },
+          "line_linked": {
+            "enable": true,
+            "distance": 120,
+            "color": "#ffffff",
+            "opacity": 0.18,
+            "width": 1
+          },
+          "move": {
+            "enable": true,
+            "speed": 0.7,
+            "direction": "none",
+            "random": true,
+            "straight": false,
+            "out_mode": "out",
+            "bounce": false
           }
+        },
+
+        "interactivity": {
+          "detect_on": "canvas",
+          "events": {
+            "onhover": {
+              "enable": true,
+              "mode": "grab"
+            },
+            "onclick": {
+              "enable": true,
+              "mode": "repulse"
+            },
+            "resize": true
+          }
+        },
+
+        "retina_detect": true
+      });
+
+      /*
+       * Streamlit renders components inside an iframe.
+       * Make this iframe itself the background layer so it
+       * does not create a large blank block above the hero.
+       */
+      try {
+        const frame = window.frameElement;
+
+        if (frame) {
+          frame.style.position = "fixed";
+          frame.style.top = "0";
+          frame.style.left = "0";
+          frame.style.width = "100vw";
+          frame.style.height = "430px";
+          frame.style.border = "0";
+          frame.style.margin = "0";
+          frame.style.padding = "0";
+          frame.style.zIndex = "0";
+          frame.style.pointerEvents = "none";
+          frame.style.background = "transparent";
         }
-      },
-      "retina_detect": true
-    });
+      } catch (error) {
+        console.warn("Unable to style Streamlit component iframe:", error);
+      }
+    }
+
+    setupParticles();
   </script>
 </body>
 </html>
 """
 
-#components.html(particles_js, height=300, width=0)
+
+# Keep the Streamlit UI above the full-width particle background.
+st.markdown(
+    """
+    <style>
+        [data-testid="stAppViewContainer"] {
+            position: relative;
+            z-index: 1;
+        }
+
+        [data-testid="stHeader"] {
+            position: relative;
+            z-index: 10;
+        }
+
+        [data-testid="stToolbar"] {
+            position: relative;
+            z-index: 20;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# The component is only a 1px placeholder in the normal document flow.
+# Its iframe is converted into a fixed background by the JavaScript above.
+
 
 # Load API key from .env file
 load_dotenv()
@@ -320,7 +339,7 @@ if "has_snowed" not in st.session_state:
     st.snow()
     st.session_state["has_snowed"] = True
 if st.session_state.show_animation:
-    components.html(particles_js, height=370, scrolling=False)
+    components.html(particles_js, height=1, scrolling=False)
   
 # Run the app
 if __name__ == "__main__":
